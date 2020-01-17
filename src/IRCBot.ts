@@ -25,10 +25,18 @@ export default class IRCBot {
     hintTimeout: number;
     // Store our match handler for cancellation
     matchHandler: any;
+    streak: {
+        user: string,
+        count: number
+    }
 
     constructor() {
         this.hintTimeout = 0;
         this.database = new Database("data/scoreboard.db");
+        this.streak = {
+            user: "",
+            count: 0
+        };
     }
 
     initializeIRCClient = () => {
@@ -53,7 +61,7 @@ export default class IRCBot {
         Request("http://jservice.io/api/random", { json: true }, (err, res, body) => {
             // Parse out the needed information from the Trivia API
             let question = body[0].question;
-            let answer = body[0].answer;
+            let answer = this.preprocessText(body[0].answer);
             let category = body[0].category.title;
 
             if (!question || !answer || !category) {
@@ -76,11 +84,35 @@ export default class IRCBot {
 
     createQuestionHandler = (answer: string) => {
         return (user: any) => {
+            // Increment  score and announce the user's current score
             this.incrementUserScore(user.nick, answer);
             this.announceAnswer(user.nick, answer);
+
+            // Handle our streaks
+            if (this.streak.user === user) {
+                this.streak = {
+                    user,
+                    count: this.streak.count + 1
+                };
+
+                if (this.streak.count >= 3) {
+                    this.client.say("#sloottest", bold(user) + " is on a streak of " + bold(this.streak.count) + "!");
+                }
+            } else {
+                if (this.streak.count >= 3) {
+                    this.client.say("#sloottest", bold(user) + " broke " + bold(this.streak.user) + "'s streak of " + bold(this.streak.count) + "!");
+                }
+
+                this.streak = {
+                    user,
+                    count: 1
+                };
+            }
+
+            // Reset our timeouts and question logic
             clearTimeout(this.hintTimeout);
             this.matchHandler.stop();
-            setTimeout(this.askQuestion, 10000);
+            setTimeout(this.askQuestion, 25000);
         }
     }
 
@@ -94,7 +126,7 @@ export default class IRCBot {
             this.client.say("#sloottest", "Times up!  The answer was " + bold(answer));
             clearTimeout(this.hintTimeout);
             this.matchHandler.stop();
-            setTimeout(this.askQuestion, 10000);
+            setTimeout(this.askQuestion, 25000);
             return;
         }
     
@@ -147,5 +179,18 @@ export default class IRCBot {
                 }
             }
         });
+    }
+
+    preprocessText = (question: string) => {
+        let processedText = question;
+
+        // Filter out quotes
+        processedText = processedText.replace("\"", "");
+
+        // Filter italicize
+        processedText = processedText.replace("<i>", "");
+        processedText = processedText.replace("</i>", "");
+
+        return processedText;
     }
 }

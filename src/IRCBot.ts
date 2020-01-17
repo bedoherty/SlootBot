@@ -1,10 +1,16 @@
 // @ts-ignore
 import { Client } from "irc-framework";
+// @ts-ignore
+import { escape } from "sqlstring";
 import Request from "request";
 import { shuffle } from "./Utils";
 // @ts-ignore
 import { Database } from "sqlite3";
+// @ts-ignore
+import * as config from "../settings/config.json";
 const IRCFormat = require('irc-colors');
+
+const { password } = config;
 
 // Dereference our IRC Formatting utils
 const { blue, green, bold } = IRCFormat;
@@ -36,7 +42,7 @@ export default class IRCBot {
         // When our client registers authorize our nick and connect to the trivia channel
         this.client.on("registered", () => {
             console.log("Registered");
-            this.client.say("NickServ", "identify verysecurepassword");
+            this.client.say("NickServ", "identify " + password);
             this.triviaChannel = this.client.channel("#sloottest");
             this.triviaChannel.join();
             this.askQuestion();
@@ -70,7 +76,7 @@ export default class IRCBot {
 
     createQuestionHandler = (answer: string) => {
         return (user: any) => {
-            this.incrementUserScore(user.nick);
+            this.incrementUserScore(user.nick, answer);
             this.announceAnswer(user.nick, answer);
             clearTimeout(this.hintTimeout);
             this.matchHandler.stop();
@@ -112,30 +118,31 @@ export default class IRCBot {
     announceAnswer = (winner: string, answer: string) => {
         let sql = ` SELECT lifetime
                     FROM scoreboard
-                    WHERE nick = "${ winner }";`;
+                    WHERE nick = "${ escape(winner) }";`;
         return this.database.get(sql, (err, row) => {
-            if (!err) {
+            if (!err && row) {
                 const { lifetime } = row;
                 this.client.say("#sloottest", "YES, " + winner + " got the correct answer, " + bold(answer) + ".  They are up to " + lifetime + " points!");
             }
         });
     }
 
-    incrementUserScore = (nick: string) => {
+    incrementUserScore = (nick: string, answer: string) => {
+        const safeNick = escape(nick);
         let sql = ` SELECT *
                     FROM scoreboard
-                    WHERE nick = "${ nick }";`;
+                    WHERE nick = "${ safeNick }";`;
 
         return this.database.get(sql, (err, row) => {
             if (!err) {
                 if (row) {
                     let sql = ` Update scoreboard
                                 Set lifetime = lifetime + 1
-                                WHERE nick = "${ nick }";`;
+                                WHERE nick = "${ safeNick }";`;
                     this.database.exec(sql);
                 } else {
                     let sql = ` INSERT INTO scoreboard (nick, lifetime, daily, weekly, monthly, yearly)
-                            VALUES ("${ nick }", 1, 0, 0, 0, 0);`;
+                            VALUES ("${ safeNick }", 1, 0, 0, 0, 0);`;
                     this.database.exec(sql);
                 }
             }

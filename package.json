@@ -5,7 +5,7 @@
   "main": "build/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node build/index.js"
+    "start": "tsc --resolveJsonModule && node build/src/index.js"
   },
   "author": "",
   "license": "MIT",
@@ -22,6 +22,7 @@
     "node-fetch": "^2.6.0",
     "request": "^2.88.0",
     "sqlite3": "^4.1.1",
+    "sqlstring": "^2.3.1",
     "typescript": "^3.7.4"
   }
 }

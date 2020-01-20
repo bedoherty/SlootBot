@@ -60,9 +60,9 @@ export default class IRCBot {
     askQuestion = () => {
         Request("http://jservice.io/api/random", { json: true }, (err, res, body) => {
             // Parse out the needed information from the Trivia API
-            let question = body[0].question;
-            let answer = this.preprocessText(body[0].answer);
-            let category = body[0].category.title;
+            let question = body?.[0]?.question;
+            let answer = this.preprocessText(body?.[0]?.answer);
+            let category = body?.[0]?.category?.title;
 
             if (!question || !answer || !category) {
                 // If any of our needed information isn't present, abandon ship
@@ -76,17 +76,18 @@ export default class IRCBot {
             this.client.say("#sloottest", "Hint 1: " + blue(obscuredAnswer));
             console.log(answer);
             let answerExp = new RegExp(answer, "i");
-            this.matchHandler = this.client.matchMessage(answerExp, this.createQuestionHandler(answer));
+            this.matchHandler = this.client.matchMessage(answerExp, this.createQuestionHandler(answer).bind(this));
 
             this.hintTimeout = setTimeout(this.startHints, 15000, answer, obscuredAnswer);
         });
     }
 
     createQuestionHandler = (answer: string) => {
-        return (user: any) => {
+        return ({ nick: user }: any) => {
             // Increment  score and announce the user's current score
-            this.incrementUserScore(user.nick, answer);
-            this.announceAnswer(user.nick, answer);
+            this.incrementUserScore(user, answer);
+            this.announceAnswer(user, answer);
+            console.log(this);
 
             // Handle our streaks
             if (this.streak.user === user) {
@@ -185,11 +186,14 @@ export default class IRCBot {
         let processedText = question;
 
         // Filter out quotes
-        processedText = processedText.replace("\"", "");
+        processedText = processedText.replace(/"/g, "");
 
         // Filter italicize
-        processedText = processedText.replace("<i>", "");
-        processedText = processedText.replace("</i>", "");
+        processedText = processedText.replace(/<i>/g, "");
+        processedText = processedText.replace(/<\/i>/g, "");
+        
+        // Filter out single quotes poorly escaped
+        processedText = processedText.replace(/\\'/g, "");
 
         return processedText;
     }

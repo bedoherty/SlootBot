@@ -5,11 +5,11 @@ jobs:
       - image: circleci/node:10.16.3
 
     steps:
+      - checkout
+
       - add_ssh_keys:
           fingerprints:
             - "32:eb:24:f6:72:3c:c0:d8:92:6f:99:49:e5:5f:19:f6"
-
-      - checkout
 
       - run:
           name: Add SSH Hosts

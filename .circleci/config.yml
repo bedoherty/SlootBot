@@ -16,4 +16,4 @@ jobs:
           command: npx tsc
       - run:
           name: Deploy to DigitalOcean
-          command: scp -r build brian@bedoherty.com:/home/brian/SlootBot
+          command: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r build brian@bedoherty.com:/home/brian/SlootBot

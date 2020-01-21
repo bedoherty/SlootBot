@@ -12,6 +12,10 @@ jobs:
       - checkout
 
       - run:
+          name: Add SSH Hosts
+          command: ssh-keyscan bedoherty.com >> ~/.ssh/known_hosts
+
+      - run:
           name: Install dependencies
           command: npm i
 

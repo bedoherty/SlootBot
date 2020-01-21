@@ -86,8 +86,6 @@ export default class IRCBot {
         return ({ nick: user }: any) => {
             // Increment  score and announce the user's current score
             this.incrementUserScore(user, answer);
-            this.announceAnswer(user, answer);
-            console.log(this);
 
             // Handle our streaks
             if (this.streak.user === user) {
@@ -151,8 +149,11 @@ export default class IRCBot {
     announceAnswer = (winner: string, answer: string) => {
         let sql = ` SELECT lifetime
                     FROM scoreboard
-                    WHERE nick = "${ escape(winner) }";`;
+                    WHERE nick = "${ winner }";`;
         return this.database.get(sql, (err, row) => {
+            console.log(sql);
+            console.log(err);
+            console.log(row);
             if (!err && row) {
                 const { lifetime } = row;
                 this.client.say("#sloottest", "YES, " + winner + " got the correct answer, " + bold(answer) + ".  They are up to " + lifetime + " points!");
@@ -161,10 +162,12 @@ export default class IRCBot {
     }
 
     incrementUserScore = (nick: string, answer: string) => {
-        const safeNick = escape(nick);
+        const safeNick = (nick);
         let sql = ` SELECT *
                     FROM scoreboard
                     WHERE nick = "${ safeNick }";`;
+
+        const { announceAnswer } = this;
 
         return this.database.get(sql, (err, row) => {
             if (!err) {
@@ -172,11 +175,15 @@ export default class IRCBot {
                     let sql = ` Update scoreboard
                                 Set lifetime = lifetime + 1
                                 WHERE nick = "${ safeNick }";`;
-                    this.database.exec(sql);
+                    this.database.exec(sql, () => {
+                        announceAnswer(safeNick, answer);
+                    });
                 } else {
                     let sql = ` INSERT INTO scoreboard (nick, lifetime, daily, weekly, monthly, yearly)
                             VALUES ("${ safeNick }", 1, 0, 0, 0, 0);`;
-                    this.database.exec(sql);
+                    this.database.exec(sql, () => {
+                        announceAnswer(safeNick, answer);
+                    });
                 }
             }
         });
@@ -194,6 +201,9 @@ export default class IRCBot {
         
         // Filter out single quotes poorly escaped
         processedText = processedText.replace(/\\'/g, "");
+
+        // Filter out extra parenthesis information
+        processedText = processedText.replace(/ *\([^)]*\) */g, "");
 
         return processedText;
     }

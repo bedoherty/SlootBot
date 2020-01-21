@@ -13,7 +13,7 @@ jobs:
 
       - run:
           name: Add SSH Hosts
-          command: ssh-keyscan bedoherty.com
+          command: ssh-keyscan bedoherty.com >> ~/.ssh/known_hosts && cat ~/.ssh/known_hosts
 
       - run:
           name: Install dependencies

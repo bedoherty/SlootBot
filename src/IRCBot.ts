@@ -10,12 +10,14 @@ import { Database } from "sqlite3";
 import * as config from "../settings/config.json";
 const IRCFormat = require('irc-colors');
 
-const { password } = config;
+const { password, channel } = config;
 
 // Dereference our IRC Formatting utils
 const { blue, green, bold } = IRCFormat;
 
-var charactersToHide = /[A-Za-z0-9]/g;
+const charactersToHide = /[A-Za-z0-9]/g;
+
+const pointValues = [ 0, 10, 5, 2 ];
 
 export default class IRCBot {
     client: Client;
@@ -54,7 +56,7 @@ export default class IRCBot {
         this.client.on("registered", () => {
             console.log("Registered");
             this.client.say("NickServ", "identify " + password);
-            this.triviaChannel = this.client.channel("#sloottest");
+            this.triviaChannel = this.client.channel(channel);
             this.triviaChannel.join();
             this.askQuestion();
         });
@@ -75,8 +77,8 @@ export default class IRCBot {
 
             let obscuredAnswer = answer.replace(charactersToHide, "*");
 
-            this.client.say("#sloottest", green(category + ": " + question));
-            this.client.say("#sloottest", "Hint 1: " + blue(obscuredAnswer));
+            this.client.say(channel, green(category + ": " + question));
+            this.client.say(channel, "Hint 1: " + blue(obscuredAnswer));
             this.hintsGiven = 1;
             console.log(answer);
             let answerExp = new RegExp(answer, "i");
@@ -100,11 +102,11 @@ export default class IRCBot {
                 };
 
                 if (this.streak.count >= 3) {
-                    this.client.say("#sloottest", bold(user) + " is on a streak of " + bold(this.streak.count) + "!");
+                    this.client.say(channel, bold(user) + " is on a streak of " + bold(this.streak.count) + "!");
                 }
             } else {
                 if (this.streak.count >= 3) {
-                    this.client.say("#sloottest", bold(user) + " broke " + bold(this.streak.user) + "'s streak of " + bold(this.streak.count) + "!");
+                    this.client.say(channel, bold(user) + " broke " + bold(this.streak.user) + "'s streak of " + bold(this.streak.count) + "!");
                 }
 
                 this.streak = {
@@ -130,7 +132,7 @@ export default class IRCBot {
 
     giveHint = (answer: string, obscuredAnswer: string, possibleReveals: number[]) => {
         if (this.hintsGiven >= 3) {
-            this.client.say("#sloottest", "Times up!  The answer was " + bold(answer));
+            this.client.say(channel, "Times up!  The answer was " + bold(answer));
             clearTimeout(this.hintTimeout);
             this.matchHandler.stop();
             setTimeout(this.askQuestion, 20000);
@@ -150,7 +152,7 @@ export default class IRCBot {
         }
     
         this.hintsGiven = this.hintsGiven + 1;
-        this.client.say("#sloottest", "Hint " + this.hintsGiven + ": " + blue(hint));
+        this.client.say(channel, "Hint " + this.hintsGiven + ": " + blue(hint));
         this.hintTimeout = setTimeout(this.giveHint, 15000, answer, hint, remainingReveals);
     }
 
@@ -164,7 +166,7 @@ export default class IRCBot {
             console.log(row);
             if (!err && row) {
                 const { lifetime } = row;
-                this.client.say("#sloottest", "YES, " + winner + " got the correct answer, " + bold(answer) + ".  They are up to " + lifetime + " points!");
+                this.client.say(channel, "YES, " + winner + " got the correct answer, " + bold(answer) + ".  They are up to " + lifetime + " points!");
             }
         });
     }
@@ -177,7 +179,7 @@ export default class IRCBot {
 
         const { announceAnswer } = this;
 
-        const points = 10;// pointValues[this.hintsGiven];
+        const points = pointValues[this.hintsGiven];
 
         return this.database.get(sql, (err, row) => {
             if (!err) {

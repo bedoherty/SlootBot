@@ -102,11 +102,11 @@ export default class IRCBot {
                 };
 
                 if (this.streak.count >= 3) {
-                    this.client.say(channel, bold(user) + " is on a streak of " + bold(this.streak.count) + "!");
+                    this.client.say(channel, bold(this.formatPingSafe(user)) + " is on a streak of " + bold(this.streak.count) + "!");
                 }
             } else {
                 if (this.streak.count >= 3) {
-                    this.client.say(channel, bold(user) + " broke " + bold(this.streak.user) + "'s streak of " + bold(this.streak.count) + "!");
+                    this.client.say(channel, bold(this.formatPingSafe(user)) + " broke " + bold(this.formatPingSafe(this.streak.user)) + "'s streak of " + bold(this.streak.count) + "!");
                 }
 
                 this.streak = {
@@ -166,7 +166,7 @@ export default class IRCBot {
             console.log(row);
             if (!err && row) {
                 const { lifetime } = row;
-                this.client.say(channel, "YES, " + winner + " got the correct answer, " + bold(answer) + ".  They are up to " + lifetime + " points!");
+                this.client.say(channel, "YES, " + this.formatPingSafe(winner) + " got the correct answer, " + bold(answer) + ".  They are up to " + lifetime + " points!");
             }
         });
     }
@@ -218,5 +218,9 @@ export default class IRCBot {
         processedText = processedText.replace(/ *\([^)]*\) */g, "");
 
         return processedText;
+    }
+
+    formatPingSafe(value: string) {
+        return value.slice(0,1) + "\u200B" + value.slice(1);
     }
 }

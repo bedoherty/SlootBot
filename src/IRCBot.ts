@@ -28,15 +28,18 @@ export default class IRCBot {
     streak: {
         user: string,
         count: number
-    }
+    };
+    hintsGiven: number;
 
     constructor() {
+        console.log("Constructing bot");
         this.hintTimeout = 0;
         this.database = new Database("data/scoreboard.db");
         this.streak = {
             user: "",
             count: 0
         };
+        this.hintsGiven = 1;
     }
 
     initializeIRCClient = () => {
@@ -74,6 +77,7 @@ export default class IRCBot {
 
             this.client.say("#sloottest", green(category + ": " + question));
             this.client.say("#sloottest", "Hint 1: " + blue(obscuredAnswer));
+            this.hintsGiven = 1;
             console.log(answer);
             let answerExp = new RegExp(answer, "i");
             this.matchHandler = this.client.matchMessage(answerExp, this.createQuestionHandler(answer).bind(this));
@@ -83,7 +87,8 @@ export default class IRCBot {
     }
 
     createQuestionHandler = (answer: string) => {
-        return ({ nick: user }: any) => {
+        return ({ nick: user, ...rest }: any) => {    
+            console.log(rest);
             // Increment  score and announce the user's current score
             this.incrementUserScore(user, answer);
 
@@ -111,25 +116,28 @@ export default class IRCBot {
             // Reset our timeouts and question logic
             clearTimeout(this.hintTimeout);
             this.matchHandler.stop();
-            setTimeout(this.askQuestion, 25000);
+            setTimeout(this.askQuestion, 20000);
         }
     }
 
     startHints = (answer: string, obscuredAnswer: string) => {
         let possibleReveals = shuffle(Array.from(Array(answer.length).keys()));
-        this.giveHint(answer, obscuredAnswer, possibleReveals, 2);
+        if (answer.length <= 2) {
+            possibleReveals = [];
+        }
+        this.giveHint(answer, obscuredAnswer, possibleReveals);
     }
 
-    giveHint = (answer: string, obscuredAnswer: string, possibleReveals: number[], hintNumber: number) => {
-        if (hintNumber === 4) {
+    giveHint = (answer: string, obscuredAnswer: string, possibleReveals: number[]) => {
+        if (this.hintsGiven >= 3) {
             this.client.say("#sloottest", "Times up!  The answer was " + bold(answer));
             clearTimeout(this.hintTimeout);
             this.matchHandler.stop();
-            setTimeout(this.askQuestion, 25000);
+            setTimeout(this.askQuestion, 20000);
             return;
         }
     
-        const sliceIndex = Math.floor(possibleReveals.length / 4) + 1;
+        const sliceIndex = Math.floor(possibleReveals.length / 3) + 1;
         const remainingReveals = possibleReveals.slice(sliceIndex);
     
         let hint = "";
@@ -141,9 +149,9 @@ export default class IRCBot {
             }
         }
     
-        this.client.say("#sloottest", "Hint " + hintNumber + ": " + blue(hint));
-    
-        this.hintTimeout = setTimeout(this.giveHint, 15000, answer, hint, remainingReveals, hintNumber + 1);
+        this.hintsGiven = this.hintsGiven + 1;
+        this.client.say("#sloottest", "Hint " + this.hintsGiven + ": " + blue(hint));
+        this.hintTimeout = setTimeout(this.giveHint, 15000, answer, hint, remainingReveals);
     }
 
     announceAnswer = (winner: string, answer: string) => {
@@ -169,18 +177,20 @@ export default class IRCBot {
 
         const { announceAnswer } = this;
 
+        const points = 10;// pointValues[this.hintsGiven];
+
         return this.database.get(sql, (err, row) => {
             if (!err) {
                 if (row) {
                     let sql = ` Update scoreboard
-                                Set lifetime = lifetime + 1
+                                Set lifetime = lifetime + ${ points }
                                 WHERE nick = "${ safeNick }";`;
                     this.database.exec(sql, () => {
                         announceAnswer(safeNick, answer);
                     });
                 } else {
                     let sql = ` INSERT INTO scoreboard (nick, lifetime, daily, weekly, monthly, yearly)
-                            VALUES ("${ safeNick }", 1, 0, 0, 0, 0);`;
+                            VALUES ("${ safeNick }", ${ points }, 0, 0, 0, 0);`;
                     this.database.exec(sql, () => {
                         announceAnswer(safeNick, answer);
                     });

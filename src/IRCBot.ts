@@ -7,10 +7,8 @@ import { shuffle } from "./Utils";
 // @ts-ignore
 import { Database } from "sqlite3";
 // @ts-ignore
-import * as config from "../settings/config.json";
+import { password, channel, botNick } from "../settings/config.json";
 const IRCFormat = require('irc-colors');
-
-const { password, channel } = config;
 
 // Dereference our IRC Formatting utils
 const { blue, green, bold } = IRCFormat;
@@ -50,7 +48,7 @@ export default class IRCBot {
         this.client.connect({
             host: "irc.snoonet.org",
             port: 6667,
-            nick: "SlootBotDev"
+            nick: botNick
         });
         // When our client registers authorize our nick and connect to the trivia channel
         this.client.on("registered", () => {

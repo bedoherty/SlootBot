@@ -2,7 +2,7 @@
   "name": "slootbot",
   "version": "1.0.0",
   "description": "A trivia bot for sloots",
-  "main": "build/index.js",
+  "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc --resolveJsonModule && node build/src/index.js"

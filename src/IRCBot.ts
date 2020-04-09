@@ -50,12 +50,13 @@ export default class IRCBot {
         this.client.connect({
             host: "irc.snoonet.org",
             port: 6667,
-            nick: "SlootBot"
+            nick: "SlootBotDev"
         });
         // When our client registers authorize our nick and connect to the trivia channel
         this.client.on("registered", () => {
             console.log("Registered");
             this.client.say("NickServ", "identify " + password);
+            this.client.matchMessage(/^!/, this.handleCommand);
             this.triviaChannel = this.client.channel(channel);
             this.triviaChannel.join();
             this.askQuestion();
@@ -86,6 +87,15 @@ export default class IRCBot {
 
             this.hintTimeout = setTimeout(this.startHints, 15000, answer, obscuredAnswer);
         });
+    }
+
+    handleCommand = ({ message }: any) => {
+        let [ command, ...args ] = message.slice(1).split(" ");
+        switch(command) {
+            case "score":
+                this.announceScore(args[0]); 
+                break;
+        }
     }
 
     createQuestionHandler = (answer: string) => {
@@ -156,19 +166,8 @@ export default class IRCBot {
         this.hintTimeout = setTimeout(this.giveHint, 15000, answer, hint, remainingReveals);
     }
 
-    announceAnswer = (winner: string, answer: string) => {
-        let sql = ` SELECT lifetime
-                    FROM scoreboard
-                    WHERE nick = "${ winner }";`;
-        return this.database.get(sql, (err, row) => {
-            console.log(sql);
-            console.log(err);
-            console.log(row);
-            if (!err && row) {
-                const { lifetime } = row;
-                this.client.say(channel, "YES, " + this.formatPingSafe(winner) + " got the correct answer, " + bold(answer) + ".  They are up to " + lifetime + " points!");
-            }
-        });
+    announceAnswer = (winner: string, answer: string, points: number) => {
+        this.client.say(channel, "YES, " + this.formatPingSafe(winner) + " got the correct answer, " + bold(answer) + ".  They scored " + points + " points!");
     }
 
     incrementUserScore = (nick: string, answer: string) => {
@@ -188,15 +187,30 @@ export default class IRCBot {
                                 Set lifetime = lifetime + ${ points }
                                 WHERE nick = "${ safeNick }";`;
                     this.database.exec(sql, () => {
-                        announceAnswer(safeNick, answer);
+                        announceAnswer(safeNick, answer, points);
                     });
                 } else {
                     let sql = ` INSERT INTO scoreboard (nick, lifetime, daily, weekly, monthly, yearly)
                             VALUES ("${ safeNick }", ${ points }, 0, 0, 0, 0);`;
                     this.database.exec(sql, () => {
-                        announceAnswer(safeNick, answer);
+                        announceAnswer(safeNick, answer, points);
                     });
                 }
+            }
+        });
+    }
+
+    announceScore = (nick: string) => {
+        let sql = ` SELECT lifetime
+        FROM scoreboard
+        WHERE nick = "${ nick }";`;
+        return this.database.get(sql, (err, row) => {
+            console.log(sql);
+            console.log(err);
+            console.log(row);
+            if (!err && row) {
+                const { lifetime } = row;
+                this.client.say(channel, this.formatPingSafe(nick) + " has a lifetime score of " + bold(lifetime) + " points!");
             }
         });
     }

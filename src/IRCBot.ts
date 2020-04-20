@@ -1,7 +1,5 @@
 // @ts-ignore
 import { Client } from "irc-framework";
-// @ts-ignore
-import { escape } from "sqlstring";
 import Request from "request";
 import { shuffle } from "./Utils";
 // @ts-ignore
@@ -9,6 +7,7 @@ import { Database } from "sqlite3";
 // @ts-ignore
 import { password, channel, botNick } from "../settings/config.json";
 const IRCFormat = require('irc-colors');
+import { CronJob } from "cron";
 
 // Dereference our IRC Formatting utils
 const { blue, green, bold } = IRCFormat;
@@ -30,6 +29,9 @@ export default class IRCBot {
         count: number
     };
     hintsGiven: number;
+    dailyClear: CronJob;
+    weeklyClear: CronJob;
+    monthlyClear: CronJob;
 
     constructor() {
         console.log("Constructing bot");
@@ -40,6 +42,37 @@ export default class IRCBot {
             count: 0
         };
         this.hintsGiven = 1;
+
+        this.dailyClear = new CronJob(
+            "00 04 * * *", 
+            this.resetScores("daily"), 
+            null, 
+            true, 
+            "America/Chicago"
+        );
+
+        this.weeklyClear = new CronJob(
+            "00 04 * * 0", 
+            this.resetScores("weekly"),
+            null, 
+            true, 
+            "America/Chicago"
+        );
+
+        this. monthlyClear = new CronJob(
+            "00 04 1 * *", 
+            this.resetScores("monthly"),
+            null, 
+            true, 
+            "America/Chicago"
+        );
+    }
+
+    resetScores = (column: string) => {
+        return () => {
+            let sql = ` Update scoreboard
+                        Set ${ column } = 0;`;
+        }
     }
 
     initializeIRCClient = () => {
@@ -90,15 +123,33 @@ export default class IRCBot {
     handleCommand = ({ message }: any) => {
         let [ command, ...args ] = message.slice(1).split(" ");
         switch(command) {
+            case "help":
+                this.listCommands(); 
+                break;
             case "score":
                 this.announceScore(args[0]); 
+                break;
+            case "lifetime":
+                this.announceLeaderboard("lifetime");
+                break;
+            case "monthly":
+                this.announceLeaderboard("monthly");
+                break;
+            case "weekly":
+                this.announceLeaderboard("weekly");
+                break;
+            case "daily":
+                this.announceLeaderboard("daily");
                 break;
         }
     }
 
+    listCommands = () => {
+        this.client.say(channel, bold("Available Commands: ") + "!score [user], !lifetime, !monthly, !weekly, !daily");
+    }
+
     createQuestionHandler = (answer: string) => {
         return ({ nick: user, ...rest }: any) => {    
-            console.log(rest);
             // Increment  score and announce the user's current score
             this.incrementUserScore(user, answer);
 
@@ -181,8 +232,12 @@ export default class IRCBot {
         return this.database.get(sql, (err, row) => {
             if (!err) {
                 if (row) {
-                    let sql = ` Update scoreboard
-                                Set lifetime = lifetime + ${ points }
+                    let sql = ` UPDATE scoreboard
+                                SET 
+                                    lifetime = lifetime + ${ points },
+                                    daily = daily + ${ points },
+                                    weekly = weekly + ${ points },
+                                    monthly = monthly + ${ points }
                                 WHERE nick = "${ safeNick }";`;
                     this.database.exec(sql, () => {
                         announceAnswer(safeNick, answer, points);
@@ -200,15 +255,28 @@ export default class IRCBot {
 
     announceScore = (nick: string) => {
         let sql = ` SELECT lifetime
-        FROM scoreboard
-        WHERE nick = "${ nick }";`;
+                    FROM scoreboard
+                    WHERE nick = "${ nick }";`;
         return this.database.get(sql, (err, row) => {
-            console.log(sql);
-            console.log(err);
-            console.log(row);
             if (!err && row) {
                 const { lifetime } = row;
                 this.client.say(channel, this.formatPingSafe(nick) + " has a lifetime score of " + bold(lifetime) + " points!");
+            }
+        });
+    }
+
+    announceLeaderboard = (column: string) => {
+        let sql = ` SELECT *
+                    FROM scoreboard
+                    WHERE ${ column } != 0
+                    ORDER BY ${ column } DESC
+                    LIMIT 10;`;
+        return this.database.all(sql, (err, rows) => {
+            if (!err && rows) {
+                let leaderPrintout = rows.map((row, index) => {
+                    return (index + 1) + ". " + bold(row.nick) + " " + row[column]
+                }).join("    ");
+                this.client.say(channel, leaderPrintout);
             }
         });
     }

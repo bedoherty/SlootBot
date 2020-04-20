@@ -274,7 +274,7 @@ export default class IRCBot {
         return this.database.all(sql, (err, rows) => {
             if (!err && rows) {
                 let leaderPrintout = rows.map((row, index) => {
-                    return (index + 1) + ". " + bold(row.nick) + " " + row[column]
+                    return (index + 1) + ". " + bold(this.formatPingSafe(row.nick)) + " " + row[column]
                 }).join("    ");
                 this.client.say(channel, leaderPrintout);
             }

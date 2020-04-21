@@ -70,8 +70,11 @@ export default class IRCBot {
 
     resetScores = (column: string) => {
         return () => {
-            let sql = ` Update scoreboard
-                        Set ${ column } = 0;`;
+            let sql = ` UPDATE scoreboard
+                        SET ${ column } = 0;`;
+            this.database.exec(sql, () => {
+                console.log("Resetting Scoreboard: " + column);
+            });
         }
     }
 

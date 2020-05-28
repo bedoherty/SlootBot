@@ -1,5 +1,6 @@
 import moment = require("moment");
 import { Scoreboards } from "./Constants";
+import { admins } from "../settings/config.json";
 
 // Helper function to parse base64 encoded strings
 export function parse64(encodedString: string) {
@@ -53,4 +54,8 @@ export const getScoreIndex = (scoreboard: Scoreboards) => {
         case Scoreboards.MONTHLY:
             return getMonthlyString();
     }
+}
+
+export const isAdmin = (nick: string) => {
+    return admins.indexOf(nick) >= 0;
 }

@@ -1,5 +1,5 @@
 import { Client } from "irc-framework";
-import { getRandomQuestion, incrementUserScore } from "./Database";
+import { getRandomQuestion, incrementUserScore, getQuestionById } from "./Database";
 import { IQuestion, IUserScores } from "./Interfaces";
 import * as IRCFormat from "irc-colors";
 import { shuffle, formatPingSafe } from "./Utils";
@@ -9,11 +9,15 @@ const { blue, green, bold } = IRCFormat;
 
 const pointValues = [ 0, 10, 5, 2 ];
 
+const charactersToHide = new RegExp(/[A-Za-z0-9]/g);
+
 export default class Game {
     channel: string;
     client: Client;
     currentAnswers: string[];
+    participants: string[];
     hints: string[][];
+    answersGiven: boolean[];
     matchHandlers: {
         [key: string]: any;
     }
@@ -21,6 +25,7 @@ export default class Game {
     running: boolean;
     hintTimeout: NodeJS.Timeout;
     nextQuestionTimeout: NodeJS.Timeout;
+    questionId: string;
 
     constructor(client: Client, channel: string) {
         this.client = client;
@@ -29,38 +34,66 @@ export default class Game {
         this.matchHandlers = {};
         this.hintsGiven = 0;
         this.running = false;
+        this.participants = [];
+        this.answersGiven = [];
     }
 
     /*
      * Game Controls
      */
     startGame = () => {
+        this.say("Starting Trivia Game");
         this.running = true;
         this.askQuestion();
     }
 
     stopGame = () => {
+        this.say("Stopping Trivia Game");
         this.running = false;
         clearTimeout(this.nextQuestionTimeout);
         this.resetQuestion();
+        
     }
 
-    askQuestion = () => {
-        getRandomQuestion().then((question: IQuestion) => {
-            const { prompt, answers } = question;
-            this.currentAnswers = answers;
-            this.addHandlers();
-            this.generateAllHints();
-            this.say(`${ green(prompt) }`);
-            this.giveHints();
-        });
+    askQuestion = (questionId?: string) => {
+        if (questionId) {
+            getQuestionById(questionId)
+                .then((question: IQuestion) => {
+                    const { prompt, answers } = question;
+                    this.currentAnswers = answers;
+                    this.answersGiven = new Array(answers.length).fill(false);
+                    this.addHandlers();
+                    this.generateAllHints();
+                    this.say(`${ green(prompt) }`);
+                    this.giveHints();
+                })
+                .catch(console.log);
+        } else {
+            getRandomQuestion()
+                .then((question: IQuestion) => {
+                    const { prompt, answers, _id } = question;
+                    this.questionId = _id.toHexString();
+                    this.currentAnswers = answers;
+                    this.answersGiven = new Array(answers.length).fill(false);
+                    this.addHandlers();
+                    this.generateAllHints();
+                    this.say(`${ green(prompt) }`);
+                    this.giveHints();
+                })
+                .catch(console.log);
+        }
     }
 
     resetQuestion = () => {
+        Object.keys(this.matchHandlers).forEach((key: string) => {
+            this.matchHandlers[key].stop();
+        });
+        this.answersGiven = [];
         this.matchHandlers = {};
         this.hints = [];
         this.currentAnswers = [];
         this.hintsGiven = 0;
+        this.participants = [];
         clearTimeout(this.hintTimeout);
     }
 
@@ -68,28 +101,44 @@ export default class Game {
      * Answer Handling
      */
     addHandlers = () => {
-        if (this.currentAnswers.length === 1) {
-            const [ answer ] = this.currentAnswers;
+        this.currentAnswers.map((answer: string, index: number) => {
             let answerExp = new RegExp(answer, "i");
-            this.matchHandlers[answer] = this.client.matchMessage(answerExp, this.createAnswerHandler());
-        } else {
-            
-        }
+            this.matchHandlers[answer] = this.client.matchMessage(answerExp, this.createAnswerHandler(answer, index));
+        });
     }
 
-    createAnswerHandler = () => {
+    createAnswerHandler = (answer: string, index: number) => {
+        const { length } = this.currentAnswers;
         return ({nick, ...rest}: any) => {
-            const { length } = this.currentAnswers;
             const points = pointValues[this.hintsGiven];
             if (length === 1) {
                 const [ answer ] = this.currentAnswers;
                 this.resetQuestion();
-                incrementUserScore(nick, points).then((userScores: IUserScores) => {
-                    this.say(`YES, ${ formatPingSafe(nick) } got the correct answer, ${ bold(answer) }.  They scored ${ points } points!`)
-                    this.queueNextQuestion();
-                });
+                incrementUserScore(nick, points)
+                    .then((userScores: IUserScores) => {
+                        this.say(`YES, ${ formatPingSafe(nick) } got the correct answer, ${ bold(answer) }.  They scored ${ points } points!`)
+                        this.queueNextQuestion();
+                    })
+                    .catch(console.log);
             } else {
-
+                incrementUserScore(nick, points);
+                this.say(`${ formatPingSafe(nick) } gets ${ points } for ${ bold(answer) }`);
+                this.answersGiven[index] = true;
+                this.matchHandlers[answer].stop();
+                delete this.matchHandlers[answer];
+                if (this.participants.indexOf(nick) === -1) {
+                    this.participants.push(nick);
+                }
+                if (this.answersGiven.reduce((prev, next) => prev && next)) {
+                    this.say("All answers found!");
+                    if (this.participants.length >= 2) {
+                        this.say("Ten bonus points for teamwork!")
+                        this.participants.map((nick: string) => {
+                            incrementUserScore(nick, 10);
+                        })
+                    }
+                    this.queueNextQuestion();
+                }
             }
         }
     }
@@ -104,10 +153,15 @@ export default class Game {
         if (length === 1) {
             this.say(`Hint ${ this.hintsGiven + 1 }: ${ blue(this.hints[0][this.hintsGiven]) }`);
         } else {
-            const hints = this.hints.map((hints: string[]) => {
-                return hints[this.hintsGiven];
+            const hints = this.hints.map((hints: string[], index: number) => {
+                if (this.answersGiven[index]) {
+                    return null;
+                }
+                return blue(hints[this.hintsGiven]);
+            }).filter((val: string) => {
+                return val !== null;
             });
-            this.say(`Hint ${ this.hintsGiven + 1 }: [${ blue(hints.join(", ")) }]`);
+            this.say(`Hint ${ this.hintsGiven + 1 }: [${ hints.join(", ") }]`);
         }
         this.hintsGiven++;
         this.hintTimeout = setTimeout(this.giveHints, 20000);
@@ -143,13 +197,12 @@ export default class Game {
     generateHint = (answer: string, reveals: number[]) => {
         let hint = "";
         for (let i = 0; i < answer.length; i++) {
-            if (reveals.indexOf(i) >= 0) {
+            if (reveals.indexOf(i) >= 0 || !charactersToHide.test(answer[i])) {
                 hint += answer[i];
             } else {
                 hint += "*";
             }
         }
-        console.log(hint);
         return hint;
     }
 
@@ -158,6 +211,16 @@ export default class Game {
         if (length === 1) {
             const [ answer ] = this.currentAnswers;
             this.say(`Times up!  The answer was ${ bold(answer) }`);
+        } else {
+            const answers = this.currentAnswers.map((answer: string, index: number) => {
+                if (this.answersGiven[index]) {
+                    return null;
+                }
+                return bold(blue(answer));
+            }).filter((val: string) => {
+                return val !== null;
+            })
+            this.say(`Times up!  No one got [ ${ answers.join(", ") } ]`);
         }
         this.queueNextQuestion();
     }
@@ -165,6 +228,11 @@ export default class Game {
     queueNextQuestion = () => {
         this.resetQuestion();
         this.nextQuestionTimeout = setTimeout(this.askQuestion, 15000);
+    }
+
+    reportQuestion = () => {
+        // Handle reported question
+        this.say("Question successfully reported!");
     }
 
     /*

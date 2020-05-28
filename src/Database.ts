@@ -1,4 +1,4 @@
-import { MongoClient, Db, WriteOpResult, UpdateWriteOpResult } from "mongodb";
+import { MongoClient, Db, WriteOpResult, UpdateWriteOpResult, ObjectId } from "mongodb";
 import { IQuestion } from "./Interfaces";
 import { getDailyString, getWeeklyString, getMonthlyString, getScoreIndex } from "./Utils";
 import { Scoreboards } from "./Constants";
@@ -21,6 +21,11 @@ export const getRandomQuestion = () => {
     return new Promise((resolve, reject) => {
         executeDB((db: Db) => { 
             db.collection("questions").aggregate([
+                {
+                    $match: {
+                        reported: false
+                    }
+                },
                 {
                     $sample: {
                         size: 1
@@ -79,6 +84,53 @@ export const getTopScores = (scoreboard: Scoreboards) => {
                 })
                 .limit(10)
                 .toArray()
+                .then(resolve)
+                .catch(reject);
+        });
+    });
+}
+
+export const getUserScore = (scoreboard: Scoreboards, nick: string) => {
+    let index = getScoreIndex(scoreboard);
+    return new Promise((resolve, reject) => {
+        executeDB((db: Db) => {
+            db
+                .collection("scores")
+                .findOne({
+                    nick
+                })
+                .then(resolve)
+                .catch(reject);
+        });
+    });
+}
+
+export const getQuestionById = (questionId: string) => {
+    return new Promise((resolve, reject) => {
+        executeDB((db: Db) => {
+            db
+                .collection("questions")
+                .findOne({
+                    _id: new ObjectId(questionId)
+                })
+                .then(resolve)
+                .catch(reject);
+        });
+    });
+}
+
+export const reportQuestion = (questionId: string) => {
+    return new Promise((resolve, reject) => {
+        executeDB((db: Db) => {
+            db
+                .collection("questions")
+                .updateOne({
+                    _id: new ObjectId(questionId)
+                }, {
+                    reported: true
+                }, {
+                    upsert: true
+                })
                 .then(resolve)
                 .catch(reject);
         });

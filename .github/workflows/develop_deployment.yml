@@ -1,0 +1,34 @@
+name: Develop Deployment Actions
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: develop
+
+      - uses: webfactory/ssh-agent@v0.2.0
+        with:
+          ssh-private-key: ${{ secrets.DO_Key }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+
+      - run: npm install
+
+      - run: npm run build
+
+      - run: tee private_key <<< "${{ secrets.DO_Key }}"
+
+      - run: chmod 400 private_key
+
+      - name: Deploy to Digital Ocean Servers
+        run: rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i private_key" --progress build/* brian@triviasloots.com:~/slootbot_dev

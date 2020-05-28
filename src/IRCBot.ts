@@ -1,5 +1,5 @@
 import { Client } from "irc-framework";
-import { password, defaultChannels, botNick, serverAddress, serverPort, spielTimer } from "../settings/config.json";
+import settings from "src/Settings";
 import Game from "./Game";
 import { Scoreboards, spiel } from "./Constants";
 import { getTopScores, getUserScore } from "./Database";
@@ -9,6 +9,9 @@ import * as IRCFormat from "irc-colors";
 
 // Dereference our IRC Formatting utils
 const { bold } = IRCFormat;
+
+// Dereference our Settings Object
+const { password, defaultChannels, botNick, serverAddress, serverPort, spielTimer } = settings;
 
 export default class IRCBot {
     client: Client;

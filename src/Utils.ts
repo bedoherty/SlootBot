@@ -1,6 +1,8 @@
 import moment = require("moment");
 import { Scoreboards } from "./Constants";
-import { admins } from "../settings/config.json";
+import settings from "src/Settings";
+
+const { admins } = settings;
 
 // Helper function to parse base64 encoded strings
 export function parse64(encodedString: string) {

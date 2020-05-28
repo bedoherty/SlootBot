@@ -1,3 +1,6 @@
+import moment = require("moment");
+import { Scoreboards } from "./Constants";
+
 // Helper function to parse base64 encoded strings
 export function parse64(encodedString: string) {
     let buffer = new Buffer(encodedString, 'base64');
@@ -21,4 +24,33 @@ export function shuffle(array: Array<any>) {
     }
 
     return array;
+}
+
+export const formatPingSafe = (value: string) => {
+    return value.slice(0,1) + "\u200B" + value.slice(1);
+}
+
+export const getDailyString = () => {
+    return moment().format("YYYYMMDD");
+}
+
+export const getWeeklyString = () => {
+    return moment().format("YYYYWW");
+}
+
+export const getMonthlyString = () => {
+    return moment().format("YYYYMM");
+}
+
+export const getScoreIndex = (scoreboard: Scoreboards) => {
+    switch (scoreboard) {
+        case Scoreboards.LIFETIME:
+            return "lifetime";
+        case Scoreboards.DAILY:
+            return getDailyString();
+        case Scoreboards.WEEKLY:
+            return getWeeklyString();
+        case Scoreboards.MONTHLY:
+            return getMonthlyString();
+    }
 }

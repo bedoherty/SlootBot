@@ -9,7 +9,7 @@ const { blue, green, bold } = IRCFormat;
 
 const pointValues = [ 0, 10, 5, 2 ];
 
-const charactersToHide = new RegExp(/[A-Za-z0-9]/g);
+const charactersToHide = new RegExp(/^[A-Za-z0-9]$/i);
 
 export default class Game {
     channel: string;
@@ -196,9 +196,9 @@ export default class Game {
 
     generateHint = (answer: string, reveals: number[]) => {
         let hint = "";
-        for (let i = 0; i < answer.length; i++) {
-            if (reveals.indexOf(i) >= 0 || !charactersToHide.test(answer[i])) {
-                hint += answer[i];
+        for (let charIndex = 0; charIndex < answer.length; charIndex++) {
+            if (reveals.indexOf(charIndex) >= 0 || !charactersToHide.test(answer[charIndex])) {
+                hint += answer[charIndex];
             } else {
                 hint += "*";
             }

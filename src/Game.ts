@@ -109,10 +109,10 @@ export default class Game {
                 this.resetQuestion();
                 incrementUserScore(nick, points)
                     .then((userScores: IUserScores) => {
-                        this.say(`YES, ${ formatPingSafe(nick) } got the correct answer, ${ bold(answer) }.  They scored ${ points } points!`)
-                        this.queueNextQuestion();
                     })
                     .catch(console.log);
+                    this.say(`YES, ${ formatPingSafe(nick) } got the correct answer, ${ bold(answer) }.  They scored ${ points } points!`)
+                    this.queueNextQuestion();
             } else {
                 incrementUserScore(nick, points);
                 this.say(`${ formatPingSafe(nick) } gets ${ points } for ${ bold(answer) }`);

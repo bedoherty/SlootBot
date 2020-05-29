@@ -1,5 +1,5 @@
 import { Client } from "irc-framework";
-import { getRandomQuestion, incrementUserScore, getQuestionById } from "./Database";
+import { getRandomQuestion, incrementUserScore, getQuestionById, reportQuestion } from "./Database";
 import { IQuestion, IUserScores } from "./Interfaces";
 import * as IRCFormat from "irc-colors";
 import { shuffle, formatPingSafe, getRegExpSafeString } from "./Utils";
@@ -56,30 +56,23 @@ export default class Game {
     }
 
     askQuestion = (questionId?: string) => {
+        const questionCallback = (question: IQuestion) => {
+            const { prompt, answers, _id } = question;
+            this.questionId = _id.toHexString();
+            this.currentAnswers = answers.map(this.preprocessText);
+            this.answersGiven = new Array(answers.length).fill(false);
+            this.addHandlers();
+            this.generateAllHints();
+            this.say(`${bold(_id.toHexString())}: ${ green(prompt) }`);
+            this.giveHints();
+        };
         if (questionId) {
             getQuestionById(questionId)
-                .then((question: IQuestion) => {
-                    const { prompt, answers } = question;
-                    this.currentAnswers = answers;
-                    this.answersGiven = new Array(answers.length).fill(false);
-                    this.addHandlers();
-                    this.generateAllHints();
-                    this.say(`${ green(prompt) }`);
-                    this.giveHints();
-                })
+                .then(questionCallback)
                 .catch(console.log);
         } else {
             getRandomQuestion()
-                .then((question: IQuestion) => {
-                    const { prompt, answers, _id } = question;
-                    this.questionId = _id.toHexString();
-                    this.currentAnswers = answers;
-                    this.answersGiven = new Array(answers.length).fill(false);
-                    this.addHandlers();
-                    this.generateAllHints();
-                    this.say(`${ green(prompt) }`);
-                    this.giveHints();
-                })
+                .then(questionCallback)
                 .catch(console.log);
         }
     }
@@ -230,9 +223,10 @@ export default class Game {
         this.nextQuestionTimeout = setTimeout(this.askQuestion, 15000);
     }
 
-    reportQuestion = () => {
+    reportQuestion = (questionId?: string) => {
         // Handle reported question
         this.say("Question successfully reported!");
+        reportQuestion(questionId ?? this.questionId);
     }
 
     /*
@@ -243,5 +237,27 @@ export default class Game {
             this.channel,
             message
         )
+    }
+
+    /*
+     * Helper method for removing common issues in answers
+     */
+    preprocessText = (question: string) => {
+        let processedText = question;
+
+        // Filter out quotes
+        processedText = processedText.replace(/"/g, "");
+
+        // Filter italicize
+        processedText = processedText.replace(/<i>/g, "");
+        processedText = processedText.replace(/<\/i>/g, "");
+        
+        // Filter out single quotes poorly escaped
+        processedText = processedText.replace(/\\'/g, "");
+
+        // Filter out extra parenthesis information
+        processedText = processedText.replace(/ *\([^)]*\) */g, "");
+
+        return processedText;
     }
 }

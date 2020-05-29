@@ -2,7 +2,7 @@ import { Client } from "irc-framework";
 import settings from "src/Settings";
 import Game from "./Game";
 import { Scoreboards, spiel } from "./Constants";
-import { getTopScores, getUserScore } from "./Database";
+import { getTopScores, getUserScore, reportQuestion } from "./Database";
 import { IUserScores } from "./Interfaces";
 import { formatPingSafe, getScoreIndex, isAdmin } from "./Utils";
 import * as IRCFormat from "irc-colors";
@@ -38,6 +38,7 @@ export default class IRCBot {
             this.client.say("NickServ", "identify " + password);
             defaultChannels.map((channelName: string) => {
                 const channel = this.client.channel(channelName);
+                this.startGame(channelName);
                 this.channels.push(channel);
             });
             this.setupHandlers();
@@ -75,7 +76,7 @@ export default class IRCBot {
                 this.printScoreboard(Scoreboards.LIFETIME, channel, args?.[0]);
                 break;
             case "report":
-                this.reportQuestion(channel);
+                this.reportQuestion(channel, args?.[0]);
                 break;
             case "help":
                 this.listCommands(channel);
@@ -134,10 +135,10 @@ export default class IRCBot {
         }
     }
 
-    reportQuestion = (channel: string) => {
+    reportQuestion = (channel: string, questionId?: string) => {
         if (Object.keys(this.games).indexOf(channel) < 0 || !this.games[channel].running) {
             const game = new Game(this.client, channel);
-            game.reportQuestion();
+            game.reportQuestion(questionId);
             this.games[channel] = game;
         }
     }

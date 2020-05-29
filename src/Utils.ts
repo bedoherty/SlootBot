@@ -61,3 +61,7 @@ export const getScoreIndex = (scoreboard: Scoreboards) => {
 export const isAdmin = (nick: string) => {
     return admins.indexOf(nick) >= 0;
 }
+
+export const getRegExpSafeString(input: string) => {
+    return input.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+}

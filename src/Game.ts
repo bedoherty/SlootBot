@@ -2,7 +2,7 @@ import { Client } from "irc-framework";
 import { getRandomQuestion, incrementUserScore, getQuestionById } from "./Database";
 import { IQuestion, IUserScores } from "./Interfaces";
 import * as IRCFormat from "irc-colors";
-import { shuffle, formatPingSafe } from "./Utils";
+import { shuffle, formatPingSafe, getRegExpSafeString } from "./Utils";
 
 // Dereference our IRC Formatting utils
 const { blue, green, bold } = IRCFormat;
@@ -102,7 +102,7 @@ export default class Game {
      */
     addHandlers = () => {
         this.currentAnswers.map((answer: string, index: number) => {
-            let answerExp = new RegExp(answer, "i");
+            let answerExp = new RegExp(getRegExpSafeString(answer), "i");
             this.matchHandlers[answer] = this.client.matchMessage(answerExp, this.createAnswerHandler(answer, index));
         });
     }

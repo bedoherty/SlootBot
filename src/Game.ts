@@ -69,11 +69,15 @@ export default class Game {
         if (questionId) {
             getQuestionById(questionId)
                 .then(questionCallback)
-                .catch(console.log);
+                .catch(() => {
+                    console.log("Error getting question by ID");
+                });
         } else {
             getRandomQuestion()
                 .then(questionCallback)
-                .catch(console.log);
+                .catch(() => {
+                    console.log("Error getting random question ");
+                });
         }
     }
 
@@ -110,7 +114,10 @@ export default class Game {
                 incrementUserScore(nick, points)
                     .then((userScores: IUserScores) => {
                     })
-                    .catch(console.log);
+                    .catch(() => {
+                        console.log("Error updating user score");
+                        console.log(nick);
+                    });
                     this.say(`YES, ${ formatPingSafe(nick) } got the correct answer, ${ bold(answer) }.  They scored ${ points } points!`)
                     this.queueNextQuestion();
             } else {

@@ -22,13 +22,13 @@ export const getRandomQuestion = () => {
         executeDB((db: Db) => { 
             db.collection("questions").aggregate([
                 {
-                    $match: {
-                        reported: false
+                    $sample: {
+                        size: 100
                     }
                 },
                 {
-                    $sample: {
-                        size: 1
+                    $match: {
+                        reported: false
                     }
                 }
             ])

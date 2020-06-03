@@ -128,18 +128,14 @@ export default class IRCBot {
     }
 
     askQuestion = (channel: string, questionId: string) => {
-        if (Object.keys(this.games).indexOf(channel) < 0 || !this.games[channel].running) {
-            const game = new Game(this.client, channel);
-            game.queueQuestion(questionId);
-            this.games[channel] = game;
+        if (Object.keys(this.games).indexOf(channel) >= 0 && this.games[channel].running) {
+            this.games[channel].queueQuestion(questionId);
         }
     }
 
     reportQuestion = (channel: string, questionId?: string) => {
-        if (Object.keys(this.games).indexOf(channel) < 0 || !this.games[channel].running) {
-            const game = new Game(this.client, channel);
-            game.reportQuestion(questionId);
-            this.games[channel] = game;
+        if (Object.keys(this.games).indexOf(channel) >= 0 && this.games[channel].running) {
+            this.games[channel].reportQuestion(questionId);
         }
     }
 

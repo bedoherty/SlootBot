@@ -272,7 +272,7 @@ export default class Game {
     reportQuestion = (index?: string) => {
         // Handle reported question
         const questionIndex = Number.parseInt(index ?? this.questionIds.length.toString());
-        const questionId = this?.questionIds?.[questionIndex];
+        const questionId = this?.questionIds?.[questionIndex - 1];
 
         if (questionId) {
             this.say("Question successfully reported!");

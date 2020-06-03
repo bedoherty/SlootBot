@@ -127,7 +127,9 @@ export const reportQuestion = (questionId: string) => {
                 .updateOne({
                     _id: new ObjectId(questionId)
                 }, {
-                    reported: true
+                    $set: {
+                        reported: true
+                    }
                 }, {
                     upsert: true
                 })

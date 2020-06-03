@@ -130,7 +130,7 @@ export default class IRCBot {
     askQuestion = (channel: string, questionId: string) => {
         if (Object.keys(this.games).indexOf(channel) < 0 || !this.games[channel].running) {
             const game = new Game(this.client, channel);
-            game.askQuestion(questionId);
+            game.queueQuestion(questionId);
             this.games[channel] = game;
         }
     }

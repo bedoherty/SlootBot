@@ -42,7 +42,7 @@ export default class IRCBot {
                 this.channels.push(channel);
             });
             this.setupHandlers();
-            this.spielInterval = setInterval(this.setupSpiels, 60000 * spielTimer);
+            this.spielInterval = setInterval(this.announceSpiels, 60000 * spielTimer);
         });
     }
 
@@ -51,8 +51,8 @@ export default class IRCBot {
         this.client.matchMessage(/^!/, this.handleAdminCommand);
     }
 
-    setupSpiels = () => {
-        this.channels.map(this.announceSpiel);
+    announceSpiels = () => {
+        this.channels.map((channel) => { return channel.name }).map(this.announceSpiel);
     }
 
     announceSpiel = (channel: string) => {
@@ -108,7 +108,7 @@ export default class IRCBot {
     }
 
     listCommands = (channel: string) => {
-        this.client.say(channel, bold("Available Commands: ") + "!lifetime [user], !monthly [user], !weekly [user], !daily [user], and !report");
+        this.client.say(channel, bold("Available Commands: ") + "!lifetime [user], !monthly [user], !weekly [user], !daily [user], and !report [questionId]");
     }
 
     startGame = (channel: string) => {

@@ -205,6 +205,7 @@ export default class Game {
             this.say(`Hint ${ this.hintsGiven + 1 }: [${ hints.join(", ") }]`);
         }
         this.hintsGiven++;
+        clearTimeout(this.hintTimeout);
         this.hintTimeout = setTimeout(this.giveHints, 20000);
     }
 
@@ -268,6 +269,7 @@ export default class Game {
 
     queueNextQuestion = () => {
         this.resetQuestion();
+        clearTimeout(this.nextQuestionTimeout);
         this.nextQuestionTimeout = setTimeout(this.askQuestion, 15000);
     }
 

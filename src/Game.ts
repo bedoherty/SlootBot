@@ -85,12 +85,14 @@ export default class Game {
             getQuestionById(questionId)
                 .then(questionCallback)
                 .catch(() => {
+                    this.askQuestion();
                     console.log("Error getting question by ID");
                 });
         } else {
             getRandomQuestion()
                 .then(questionCallback)
                 .catch(() => {
+                    this.askQuestion();
                     console.log("Error getting random question ");
                 });
         }

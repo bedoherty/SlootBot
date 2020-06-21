@@ -121,8 +121,7 @@ export default class IRCBot {
 
     stopGame = (channel: string) => {
         if (Object.keys(this.games).indexOf(channel) >= 0 && this.games[channel].running) {
-            const game = new Game(this.client, channel);
-            game.stopGame();
+            this.games[channel].stopGame();
             delete this.games[channel];
         }
     }

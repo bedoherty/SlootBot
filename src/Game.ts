@@ -64,7 +64,6 @@ export default class Game {
         this.running = false;
         clearTimeout(this.nextQuestionTimeout);
         this.resetQuestion();
-        
     }
 
     askQuestion = () => {

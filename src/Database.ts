@@ -11,7 +11,7 @@ const executeDB = (callback: (db:  Db) => void) => {
                 reject(err);
             }
 
-            resolve(callback(client.db("develop")));
+            resolve(callback(client.db("production")));
             client.close();
         });
     });

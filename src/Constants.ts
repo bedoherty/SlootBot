@@ -5,4 +5,4 @@ export enum Scoreboards {
     MONTHLY = "monthly"
 }
 
-export const spiel = `Enjoying #trivia?  Hop in #triviachat and hangout with us.  Having a rough day?  Hop in #madworld and tell us about it!`
+export const spiel = `Enjoying #trivia?  Hop in #triviachat and hang out with us.  Having a rough day?  Hop in #madworld and tell us about it!`

@@ -34,15 +34,15 @@ export const formatPingSafe = (value: string) => {
 }
 
 export const getDailyString = () => {
-    return "daily-" + moment().format("YYYYMMDD");
+    return "daily-" + moment().utcOffset("-1000").format("YYYYMMDD");
 }
 
 export const getWeeklyString = () => {
-    return "weekly-" + moment().format("YYYYWW");
+    return "weekly-" + moment().utcOffset("-1000").format("YYYYWW");
 }
 
 export const getMonthlyString = () => {
-    return "monthly-" + moment().format("YYYYMM");
+    return "monthly-" + moment().utcOffset("-1000").format("YYYYMM");
 }
 
 export const getScoreIndex = (scoreboard: Scoreboards) => {
